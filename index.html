@@ -1,0 +1,935 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>Field Notes · Reflection</title>
+<!-- PWA: installable app -->
+<link rel="manifest" href="manifest.webmanifest" />
+<meta name="theme-color" content="#2b2a4a" />
+<link rel="apple-touch-icon" href="icon-180.png" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="Field Notes" />
+<meta name="mobile-web-app-capable" content="yes" />
+<style>
+  :root{
+    --bg:#f4f1ea;
+    --bg2:#ece7dc;
+    --paper:#fffdf8;
+    --ink:#282436;
+    --ink2:#4a4560;
+    --muted:#8a8397;
+    --line:#e6e0d4;
+    --line2:#d9d2c4;
+    --accent:#5b6cff;
+    --accent-ink:#3a49d6;
+    --header:#2b2a4a;
+    --header2:#3a3860;
+    --good:#1f9d78;
+    --warn:#d98a1f;
+    --bad:#d9534f;
+    --shadow:0 10px 30px rgba(40,36,54,.10);
+    --shadow-sm:0 2px 8px rgba(40,36,54,.07);
+    --radius:16px;
+    /* category colors */
+    --c-mind:#5b8cff; --c-emotion:#ff6f91; --c-energy:#ff9f43; --c-behaviour:#1fb98b; --c-idea:#f5b301;
+    /* output category colors */
+    --o-pattern:#5b8cff; --o-intense:#ff6f91; --o-big:#f5b301; --o-useful:#1fb98b;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;min-height:100%;}
+  body{
+    font-family:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",sans-serif;
+    color:var(--ink);
+    background:linear-gradient(170deg,var(--bg),var(--bg2));
+    min-height:100vh;
+    -webkit-font-smoothing:antialiased;
+  }
+  a{color:var(--accent-ink);}
+  .hidden{display:none !important;}
+
+  /* ---------- App frame ---------- */
+  .app{max-width:1040px;margin:0 auto;padding:0 0 96px;}
+  header.top{
+    background:linear-gradient(120deg,var(--header),var(--header2));
+    color:#fff;padding:14px 18px;display:flex;align-items:center;gap:14px;
+    position:sticky;top:0;z-index:40;box-shadow:0 4px 18px rgba(0,0,0,.14);
+    padding-top:calc(14px + env(safe-area-inset-top));
+  }
+  .brand{font-weight:800;font-size:18px;letter-spacing:.3px;margin-right:auto;display:flex;align-items:center;gap:9px;}
+  .brand .dot{width:11px;height:11px;border-radius:50%;background:linear-gradient(135deg,var(--accent),#8f7bff);box-shadow:0 0 0 4px rgba(91,108,255,.25);}
+  .brand small{display:block;font-size:10px;letter-spacing:2px;color:#b9b6d8;font-weight:600;text-transform:uppercase;}
+  .mode-badge{font-size:11px;font-weight:700;padding:5px 10px;border-radius:999px;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.2);white-space:nowrap;}
+  .mode-badge.local{color:#ffe0a3;}
+  .mode-badge.cloud{color:#a9f5d6;}
+  .top .who{font-size:12px;color:#cfcce8;display:flex;align-items:center;gap:8px;}
+  .linkbtn{background:none;border:none;color:#cfcce8;font:inherit;font-size:12px;cursor:pointer;text-decoration:underline;padding:0;}
+
+  /* desktop tabs in header */
+  nav.tabs{display:flex;gap:4px;}
+  nav.tabs button{
+    background:transparent;border:none;color:#c9c6e6;font:inherit;font-weight:700;font-size:14px;
+    padding:9px 14px;border-radius:10px;cursor:pointer;display:flex;align-items:center;gap:7px;transition:.12s;
+  }
+  nav.tabs button .ic{font-size:16px;}
+  nav.tabs button:hover{background:rgba(255,255,255,.08);color:#fff;}
+  nav.tabs button.active{background:#fff;color:var(--header);}
+
+  /* bottom nav (mobile) */
+  nav.bottom{
+    position:fixed;left:0;right:0;bottom:0;z-index:45;display:none;
+    background:var(--paper);border-top:1px solid var(--line);
+    padding:6px 6px calc(6px + env(safe-area-inset-bottom));
+    justify-content:space-around;box-shadow:0 -6px 20px rgba(40,36,54,.08);
+  }
+  nav.bottom button{
+    background:none;border:none;font:inherit;color:var(--muted);cursor:pointer;
+    display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 8px;border-radius:12px;font-size:11px;font-weight:700;flex:1;
+  }
+  nav.bottom button .ic{font-size:20px;line-height:1;}
+  nav.bottom button.active{color:var(--accent-ink);background:rgba(91,108,255,.10);}
+
+  main{padding:18px;}
+  .screen-head{display:flex;align-items:baseline;gap:12px;margin:2px 2px 16px;flex-wrap:wrap;}
+  .screen-head h1{font-size:22px;margin:0;}
+  .screen-head p{margin:0;color:var(--muted);font-size:13px;}
+
+  /* ---------- Cards / panels ---------- */
+  .card{background:var(--paper);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow-sm);padding:18px;}
+  .card + .card{margin-top:14px;}
+  .grid2{display:grid;grid-template-columns:1fr;gap:16px;}
+  @media(min-width:860px){ .grid2{grid-template-columns:minmax(0,1fr) minmax(0,1fr);} }
+
+  label.fld{display:block;font-weight:700;font-size:13px;margin:0 0 6px;color:var(--ink2);}
+  .row-between{display:flex;justify-content:space-between;align-items:center;gap:10px;}
+  input[type=text],input[type=search],input[type=date],input[type=email],textarea,select{
+    width:100%;font:inherit;color:var(--ink);background:#fff;border:1.5px solid var(--line2);border-radius:11px;
+    padding:11px 12px;outline:none;transition:border-color .12s, box-shadow .12s;
+  }
+  textarea{resize:vertical;min-height:84px;line-height:1.5;}
+  input:focus,textarea:focus,select:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(91,108,255,.14);}
+  .counter{font-size:12px;font-weight:700;color:var(--muted);}
+  .counter.warn{color:var(--warn);}
+  .counter.bad{color:var(--bad);}
+  .field{margin-bottom:14px;}
+  .hint{font-size:12px;color:var(--muted);margin-top:5px;}
+
+  /* chips */
+  .chips{display:flex;flex-wrap:wrap;gap:8px;}
+  .chip{
+    border:1.5px solid var(--line2);background:#fff;border-radius:999px;padding:8px 13px;font-size:13px;font-weight:700;
+    cursor:pointer;display:inline-flex;align-items:center;gap:7px;color:var(--ink2);transition:.12s;user-select:none;
+  }
+  .chip .swatch{width:10px;height:10px;border-radius:50%;background:var(--sw,#ccc);}
+  .chip:hover{border-color:var(--accent);}
+  .chip.on{background:var(--sw,#eef);border-color:var(--sw,#88f);color:#fff;}
+  .chip.on .swatch{background:#fff;}
+  .chip.sm{padding:5px 10px;font-size:12px;}
+
+  .tag{display:inline-flex;align-items:center;gap:5px;background:#efece4;border:1px solid var(--line2);border-radius:999px;padding:3px 9px;font-size:11px;font-weight:700;color:var(--ink2);}
+
+  /* buttons */
+  .btn{border:none;border-radius:12px;padding:11px 16px;font:inherit;font-weight:800;font-size:14px;cursor:pointer;transition:.1s;display:inline-flex;align-items:center;gap:7px;justify-content:center;}
+  .btn:active{transform:translateY(1px);}
+  .btn-primary{background:linear-gradient(120deg,var(--accent),#8272ff);color:#fff;box-shadow:0 8px 16px rgba(91,108,255,.28);}
+  .btn-primary:disabled{opacity:.5;box-shadow:none;cursor:not-allowed;}
+  .btn-ghost{background:#efece4;color:var(--ink);}
+  .btn-danger{background:#fbe9e8;color:var(--bad);}
+  .btn-sm{padding:7px 11px;font-size:13px;border-radius:10px;}
+  .btn-block{width:100%;}
+  .btn-row{display:flex;gap:10px;flex-wrap:wrap;}
+
+  /* note cards */
+  .note-card{border:1px solid var(--line);border-left:4px solid var(--sw,#ccc);border-radius:12px;padding:13px 14px;background:#fff;cursor:pointer;transition:.12s;box-shadow:var(--shadow-sm);}
+  .note-card:hover{transform:translateY(-2px);box-shadow:var(--shadow);}
+  .note-card .nc-top{display:flex;justify-content:space-between;gap:8px;align-items:center;margin-bottom:5px;}
+  .note-card h3{font-size:15px;margin:0;line-height:1.35;}
+  .note-card .body{color:var(--ink2);font-size:13px;line-height:1.5;margin:4px 0 0;white-space:pre-wrap;overflow:hidden;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;}
+  .meta{font-size:11px;color:var(--muted);font-weight:600;display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
+  .catlabel{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:800;padding:3px 9px;border-radius:999px;color:#fff;background:var(--sw,#999);}
+  .list-grid{display:grid;grid-template-columns:1fr;gap:11px;}
+  @media(min-width:640px){ .list-grid{grid-template-columns:1fr 1fr;} }
+  @media(min-width:960px){ .list-grid.wide3{grid-template-columns:1fr 1fr 1fr;} }
+
+  .empty{text-align:center;color:var(--muted);padding:34px 16px;font-size:14px;}
+  .empty .big{font-size:34px;margin-bottom:8px;}
+
+  /* linker */
+  .linker{border:1px solid var(--line);border-radius:12px;max-height:340px;overflow:auto;background:#fff;}
+  .linker .lk-row{display:flex;gap:10px;padding:10px 12px;border-bottom:1px solid var(--line);cursor:pointer;align-items:flex-start;}
+  .linker .lk-row:last-child{border-bottom:none;}
+  .linker .lk-row:hover{background:#f7f5ef;}
+  .linker .lk-row.sel{background:rgba(91,108,255,.08);}
+  .linker input[type=checkbox]{margin-top:3px;width:17px;height:17px;accent-color:var(--accent);}
+  .linker .lk-title{font-weight:700;font-size:13px;}
+  .linker .lk-body{font-size:12px;color:var(--muted);margin-top:2px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+
+  /* next-step editor */
+  .ns-item{display:flex;gap:8px;align-items:flex-start;margin-bottom:8px;}
+  .ns-item textarea{min-height:44px;}
+  .ns-list-line{border:1px solid var(--line);border-radius:10px;padding:10px 12px;background:#fbfaf6;margin-bottom:8px;font-size:13px;color:var(--ink2);display:flex;justify-content:space-between;gap:10px;}
+
+  /* filter bar */
+  .filterbar{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;}
+  .filterbar .fgroup{display:flex;flex-direction:column;gap:5px;}
+  .filterbar .fgroup .lab{font-size:11px;font-weight:800;letter-spacing:.4px;text-transform:uppercase;color:var(--muted);}
+  .daterow{display:flex;align-items:center;gap:6px;}
+  .daterow input[type=date]{width:auto;padding:8px 9px;}
+
+  /* table */
+  .tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:12px;background:#fff;}
+  table{border-collapse:collapse;width:100%;font-size:13px;min-width:520px;}
+  th,td{text-align:left;padding:11px 13px;border-bottom:1px solid var(--line);vertical-align:top;}
+  th{font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);background:#faf8f2;position:sticky;top:0;cursor:pointer;user-select:none;white-space:nowrap;}
+  tbody tr{cursor:pointer;}
+  tbody tr:hover{background:#f7f5ef;}
+  td .titlecell{font-weight:700;color:var(--ink);}
+  .pill-count{display:inline-block;min-width:22px;text-align:center;background:var(--accent);color:#fff;border-radius:999px;padding:2px 8px;font-weight:800;font-size:12px;}
+  .pill-count.zero{background:#d8d3c8;color:#6b6577;}
+
+  /* modal */
+  .modal-back{position:fixed;inset:0;background:rgba(30,26,44,.5);backdrop-filter:blur(3px);z-index:60;display:flex;align-items:flex-start;justify-content:center;padding:24px 14px;overflow:auto;}
+  .modal{background:var(--paper);border-radius:18px;box-shadow:0 24px 60px rgba(0,0,0,.3);width:100%;max-width:680px;padding:22px;margin:auto;}
+  .modal h2{margin:0 0 4px;font-size:20px;}
+  .modal .close{float:right;background:#efece4;border:none;width:34px;height:34px;border-radius:10px;font-size:18px;cursor:pointer;color:var(--ink2);}
+  .divider{height:1px;background:var(--line);margin:16px 0;}
+  .section-label{font-size:12px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;color:var(--muted);margin:0 0 9px;}
+  .linked-note{border:1px solid var(--line);border-left:4px solid var(--sw,#ccc);border-radius:10px;padding:11px 12px;background:#fff;margin-bottom:9px;}
+  .fu-note{border:1px solid var(--line);border-radius:10px;padding:10px 12px;background:#fbfaf6;margin-bottom:8px;}
+  .fu-note .meta{margin-bottom:4px;}
+
+  /* toast */
+  #toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(84px + env(safe-area-inset-bottom));background:var(--ink);color:#fff;padding:11px 18px;border-radius:12px;font-weight:700;font-size:14px;z-index:80;opacity:0;pointer-events:none;transition:opacity .2s, transform .2s;box-shadow:var(--shadow);}
+  #toast.show{opacity:1;transform:translateX(-50%) translateY(-4px);}
+
+  /* auth gate */
+  .auth-wrap{min-height:70vh;display:flex;align-items:center;justify-content:center;padding:24px;}
+  .auth-card{max-width:400px;width:100%;text-align:center;}
+  .auth-card .big{font-size:40px;margin-bottom:6px;}
+
+  /* responsive nav swap */
+  @media(max-width:760px){
+    nav.tabs{display:none;}
+    nav.bottom{display:flex;}
+    .top .who{display:none;}
+    main{padding:14px;}
+    .screen-head h1{font-size:20px;}
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="top">
+    <div class="brand"><span class="dot"></span><div>Field Notes<small>Reflection</small></div></div>
+    <nav class="tabs" id="tabsDesktop"></nav>
+    <span class="who" id="whoami"></span>
+    <span class="mode-badge" id="modeBadge"></span>
+  </header>
+  <main id="main"></main>
+  <nav class="bottom" id="tabsMobile"></nav>
+</div>
+<div id="toast"></div>
+
+<!-- Supabase client (only actually used when configured below). Harmless in local mode. -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js" defer></script>
+
+<script>
+/* ============================================================================
+   Field Notes · Reflection tool
+   Single-file PWA. Runs on localStorage by default; flips to Supabase cloud
+   sync automatically when you fill in CONFIG below (URL + anon key).
+   ========================================================================== */
+
+/* ---- 1. CONFIG — paste your Supabase project details to enable cloud sync ---- */
+const CONFIG = {
+  SUPABASE_URL: "https://cyquxacjdqzgepenybbr.supabase.co",        // e.g. "https://abcdxyz.supabase.co"
+  SUPABASE_ANON_KEY: "sb_publishable_v-n921mse67S57fHF73IPw_ms2q4SUz",   // publishable / anon key
+};
+const USE_CLOUD = !!(CONFIG.SUPABASE_URL && CONFIG.SUPABASE_ANON_KEY);
+
+/* ---- 2. Domain constants ---- */
+const NOTE_CATS = [
+  { key:"Mind/Thoughts", short:"Mind", emoji:"🧠", sw:"var(--c-mind)" },
+  { key:"Emotions",      short:"Emotions", emoji:"❤️", sw:"var(--c-emotion)" },
+  { key:"Energy",        short:"Energy", emoji:"⚡", sw:"var(--c-energy)" },
+  { key:"Behaviours",    short:"Behaviours", emoji:"🚶", sw:"var(--c-behaviour)" },
+  { key:"Idea",          short:"Idea", emoji:"💡", sw:"var(--c-idea)" },
+];
+const OUT_CATS = [
+  { key:"Patterns",                   emoji:"🔁", sw:"var(--o-pattern)" },
+  { key:"Intense Emotions/Reactions", emoji:"🌊", sw:"var(--o-intense)" },
+  { key:"Big Idea",                   emoji:"💡", sw:"var(--o-big)" },
+  { key:"Useful & Backlog",           emoji:"📌", sw:"var(--o-useful)" },
+];
+const noteCat = k => NOTE_CATS.find(c=>c.key===k) || {key:k,short:k,emoji:"•",sw:"#999"};
+const outCat  = k => OUT_CATS.find(c=>c.key===k)  || {key:k,emoji:"•",sw:"#999"};
+
+const TITLE_MIN=10, TITLE_MAX=15, NOTE_WORDS=500, OUT_WORDS=500;
+
+/* ---- 3. Helpers ---- */
+const $ = (s,r=document)=>r.querySelector(s);
+const uid = ()=> (crypto.randomUUID ? crypto.randomUUID() : "id-"+Date.now()+"-"+Math.round(Math.random()*1e6));
+const nowISO = ()=> new Date().toISOString();
+const esc = s => (s==null?"":String(s)).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const wordCount = s => { const t=(s||"").trim(); return t? t.split(/\s+/).length : 0; };
+
+function isoWeek(dt){
+  const d=new Date(Date.UTC(dt.getFullYear(),dt.getMonth(),dt.getDate()));
+  const dayNum=(d.getUTCDay()+6)%7; d.setUTCDate(d.getUTCDate()-dayNum+3);
+  const firstThu=new Date(Date.UTC(d.getUTCFullYear(),0,4));
+  const week=1+Math.round(((d-firstThu)/86400000 - 3 + ((firstThu.getUTCDay()+6)%7))/7);
+  return { year:d.getUTCFullYear(), week };
+}
+const weekLabel = iso => { const w=isoWeek(new Date(iso)); return `${w.year}-W${String(w.week).padStart(2,"0")}`; };
+const fmtDateTime = iso => new Date(iso).toLocaleString(undefined,{month:"short",day:"numeric",year:"numeric",hour:"numeric",minute:"2-digit"});
+const fmtDate = iso => new Date(iso).toLocaleDateString(undefined,{month:"short",day:"numeric",year:"numeric"});
+const dayKey = iso => { const d=new Date(iso); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`; };
+
+function toast(msg){ const t=$("#toast"); t.textContent=msg; t.classList.add("show"); clearTimeout(toast._t); toast._t=setTimeout(()=>t.classList.remove("show"),2200); }
+
+/* ============================================================================
+   4. STORAGE LAYER — in-memory DB mirrored to localStorage, optionally synced
+      to Supabase. All screens read from DB.* and call store.* mutators.
+   ========================================================================== */
+const DB = { field_notes:[], outputs:[], links:[], next_steps:[], followups:[] };
+const LS_KEY = "reflection_db_v1";
+let supa = null, USER_ID = null;
+
+function persistLocal(){ try{ localStorage.setItem(LS_KEY, JSON.stringify(DB)); }catch(e){ console.warn("persist failed",e); } }
+function loadLocal(){
+  try{ const raw=localStorage.getItem(LS_KEY); if(raw){ const d=JSON.parse(raw); for(const k in DB){ if(Array.isArray(d[k])) DB[k]=d[k]; } } }
+  catch(e){ console.warn("load failed",e); }
+}
+
+/* ---- Cloud helpers (only exercised when USE_CLOUD) ---- */
+async function cloudPull(){
+  const tables=["field_notes","outputs","output_note_links","next_steps","next_step_followups"];
+  const map={output_note_links:"links",next_step_followups:"followups"};
+  for(const t of tables){
+    const { data, error } = await supa.from(t).select("*");
+    if(error){ console.warn("pull",t,error.message); continue; }
+    DB[map[t]||t]=data||[];
+  }
+  persistLocal();
+}
+async function cloudInsert(table,row){ const { error }=await supa.from(table).insert(row); if(error) throw error; }
+async function cloudUpdate(table,id,patch){ const { error }=await supa.from(table).update(patch).eq("id",id); if(error) throw error; }
+async function cloudDelete(table,col,val){ const { error }=await supa.from(table).delete().eq(col,val); if(error) throw error; }
+
+/* Queue for writes attempted while offline (cloud mode). */
+const Q_KEY="reflection_queue_v1";
+function queue(op){ if(!USE_CLOUD) return; const q=JSON.parse(localStorage.getItem(Q_KEY)||"[]"); q.push(op); localStorage.setItem(Q_KEY,JSON.stringify(q)); }
+async function flushQueue(){
+  if(!USE_CLOUD || !navigator.onLine) return;
+  let q=JSON.parse(localStorage.getItem(Q_KEY)||"[]"); if(!q.length) return;
+  const rest=[];
+  for(const op of q){
+    try{
+      if(op.k==="insert") await cloudInsert(op.table,op.row);
+      else if(op.k==="update") await cloudUpdate(op.table,op.id,op.patch);
+      else if(op.k==="delete") await cloudDelete(op.table,op.col,op.val);
+    }catch(e){ rest.push(op); }
+  }
+  localStorage.setItem(Q_KEY,JSON.stringify(rest));
+}
+window.addEventListener("online",()=>{ flushQueue().then(()=>toast("Synced")); });
+
+/* Push a write to cloud (or queue it). Local state already updated by caller. */
+async function push(k,args){
+  if(!USE_CLOUD) return;
+  try{
+    if(k==="insert") await cloudInsert(args.table,args.row);
+    else if(k==="update") await cloudUpdate(args.table,args.id,args.patch);
+    else if(k==="delete") await cloudDelete(args.table,args.col,args.val);
+  }catch(e){ queue({k,...args}); }
+}
+
+/* ---- store: the mutation API used by the UI ---- */
+const store = {
+  async addNote({title,content,category,tags}){
+    const row={ id:uid(), user_id:USER_ID, title, content, category, tags:tags||[], created_at:nowISO() };
+    DB.field_notes.unshift(row); persistLocal(); await push("insert",{table:"field_notes",row});
+    return row;
+  },
+  async updateNote(id,patch){
+    const n=DB.field_notes.find(x=>x.id===id); if(!n) return; Object.assign(n,patch);
+    persistLocal(); await push("update",{table:"field_notes",id,patch});
+  },
+  async deleteNote(id){
+    DB.field_notes=DB.field_notes.filter(x=>x.id!==id);
+    DB.links=DB.links.filter(l=>l.field_note_id!==id);
+    persistLocal();
+    await push("delete",{table:"output_note_links",col:"field_note_id",val:id});
+    await push("delete",{table:"field_notes",col:"id",val:id});
+  },
+  async saveOutput({id,title,content,categories,noteIds,steps}){
+    const editing=!!id;
+    if(editing){
+      const o=DB.outputs.find(x=>x.id===id); if(!o) return;
+      const patch={title,content,categories}; Object.assign(o,patch);
+      persistLocal(); await push("update",{table:"outputs",id,patch});
+      // replace links
+      const old=DB.links.filter(l=>l.output_id===id);
+      DB.links=DB.links.filter(l=>l.output_id!==id);
+      await push("delete",{table:"output_note_links",col:"output_id",val:id});
+    } else {
+      id=uid();
+      const row={ id, user_id:USER_ID, title, content, categories, created_at:nowISO() };
+      DB.outputs.unshift(row); await push("insert",{table:"outputs",row});
+    }
+    // links
+    for(const fnid of noteIds){
+      const link={ id:uid(), output_id:id, field_note_id:fnid };
+      DB.links.push(link);
+      await push("insert",{table:"output_note_links",row:{id:link.id,output_id:id,field_note_id:fnid}});
+    }
+    // steps: only add NEW ones (steps without id). Existing kept as-is on edit.
+    for(const s of steps){
+      if(s.id) continue;
+      const row={ id:uid(), user_id:USER_ID, output_id:id, text:s.text, created_at:nowISO() };
+      DB.next_steps.push(row); await push("insert",{table:"next_steps",row});
+    }
+    persistLocal();
+    return id;
+  },
+  async deleteOutput(id){
+    const steps=DB.next_steps.filter(s=>s.output_id===id).map(s=>s.id);
+    DB.followups=DB.followups.filter(f=>!steps.includes(f.next_step_id));
+    DB.next_steps=DB.next_steps.filter(s=>s.output_id!==id);
+    DB.links=DB.links.filter(l=>l.output_id!==id);
+    DB.outputs=DB.outputs.filter(o=>o.id!==id);
+    persistLocal();
+    for(const sid of steps){ await push("delete",{table:"next_step_followups",col:"next_step_id",val:sid}); }
+    await push("delete",{table:"next_steps",col:"output_id",val:id});
+    await push("delete",{table:"output_note_links",col:"output_id",val:id});
+    await push("delete",{table:"outputs",col:"id",val:id});
+  },
+  async addStep(outputId,text){
+    const row={ id:uid(), user_id:USER_ID, output_id:outputId, text, created_at:nowISO() };
+    DB.next_steps.push(row); persistLocal(); await push("insert",{table:"next_steps",row});
+    return row;
+  },
+  async deleteStep(id){
+    DB.followups=DB.followups.filter(f=>f.next_step_id!==id);
+    DB.next_steps=DB.next_steps.filter(s=>s.id!==id);
+    persistLocal();
+    await push("delete",{table:"next_step_followups",col:"next_step_id",val:id});
+    await push("delete",{table:"next_steps",col:"id",val:id});
+  },
+  async addFollowup(stepId,text){
+    const row={ id:uid(), next_step_id:stepId, text, created_at:nowISO() };
+    DB.followups.push(row); persistLocal(); await push("insert",{table:"next_step_followups",row});
+    return row;
+  },
+};
+
+/* Derived helpers */
+const notesForOutput = oid => DB.links.filter(l=>l.output_id===oid).map(l=>DB.field_notes.find(n=>n.id===l.field_note_id)).filter(Boolean);
+const stepsForOutput = oid => DB.next_steps.filter(s=>s.output_id===oid).sort((a,b)=>a.created_at<b.created_at?-1:1);
+const followupsForStep = sid => DB.followups.filter(f=>f.next_step_id===sid).sort((a,b)=>a.created_at<b.created_at?-1:1);
+const outputById = id => DB.outputs.find(o=>o.id===id);
+
+/* ============================================================================
+   5. UI STATE + ROUTING
+   ========================================================================== */
+const TABS=[
+  {key:"capture", label:"Capture", ic:"✍️"},
+  {key:"weekly",  label:"Weekly",  ic:"🗓️"},
+  {key:"outputs", label:"Outputs", ic:"📊"},
+  {key:"steps",   label:"Next Steps", ic:"✅"},
+];
+const state = {
+  tab:"capture",
+  noteFilter:"all",
+  editingNote:null,
+  weekly:null,       // transient composer state
+  outFilter:{cats:[], from:"", to:"", sort:"desc"},
+  stepFilter:{cats:[], from:"", to:"", sort:"desc"},
+};
+
+function renderTabs(){
+  const mk = host => host.innerHTML = TABS.map(t=>
+    `<button data-tab="${t.key}" class="${state.tab===t.key?'active':''}"><span class="ic">${t.ic}</span><span>${t.label}</span></button>`
+  ).join("");
+  mk($("#tabsDesktop")); mk($("#tabsMobile"));
+}
+document.addEventListener("click",e=>{
+  const tb=e.target.closest("[data-tab]"); if(tb){ state.tab=tb.dataset.tab; render(); }
+});
+
+function render(){
+  renderTabs();
+  const m=$("#main");
+  if(state.tab==="capture") renderCapture(m);
+  else if(state.tab==="weekly") renderWeekly(m);
+  else if(state.tab==="outputs") renderOutputs(m);
+  else if(state.tab==="steps") renderSteps(m);
+  window.scrollTo(0,0);
+}
+
+/* ---- shared UI bits ---- */
+function catChips(cats, selected, {multi=false, size=""}={}){
+  return `<div class="chips">`+cats.map(c=>{
+    const on = multi ? selected.includes(c.key) : selected===c.key;
+    return `<button type="button" class="chip ${size} ${on?'on':''}" data-catpick="${esc(c.key)}" style="--sw:${c.sw}">
+      <span class="swatch"></span>${c.emoji} ${esc(c.short||c.key)}</button>`;
+  }).join("")+`</div>`;
+}
+function counterEl(id,count,max,min){
+  let cls="counter"; if(count>max) cls+=" bad"; else if(min && (count<min||count>max)) cls+=" warn";
+  return `<span id="${id}" class="${cls}">${count}${max?`/${max}`:""} words</span>`;
+}
+
+/* ============================================================================
+   6. CAPTURE SCREEN
+   ========================================================================== */
+function renderCapture(m){
+  const editing = state.editingNote;
+  const cur = editing ? DB.field_notes.find(n=>n.id===editing) : null;
+  const f = state._noteForm || (state._noteForm = {
+    title:cur?cur.title:"", content:cur?cur.content:"", category:cur?cur.category:null, tags:cur?(cur.tags||[]).join(", "):""
+  });
+
+  const filtered = DB.field_notes.filter(n=> state.noteFilter==="all" || n.category===state.noteFilter);
+
+  m.innerHTML = `
+    <div class="screen-head"><h1>✍️ Capture</h1><p>Quick field notes — 1 to 5 a day. Auto-stamped with date &amp; week.</p></div>
+    <div class="card" id="composer">
+      <div class="field">
+        <div class="row-between"><label class="fld">Title <span style="color:var(--muted);font-weight:600">(10–15 words)</span></label>${counterEl("nTitleC",wordCount(f.title),TITLE_MAX,TITLE_MIN)}</div>
+        <input type="text" id="nTitle" placeholder="A short headline for this thought…" value="${esc(f.title)}" />
+      </div>
+      <div class="field">
+        <div class="row-between"><label class="fld">Note <span style="color:var(--muted);font-weight:600">(max 500 words)</span></label>${counterEl("nBodyC",wordCount(f.content),NOTE_WORDS)}</div>
+        <textarea id="nBody" placeholder="What did you notice / think / feel?">${esc(f.content)}</textarea>
+      </div>
+      <div class="field">
+        <label class="fld">Category</label>
+        <div id="nCats">${catChips(NOTE_CATS,f.category)}</div>
+      </div>
+      <div class="field">
+        <label class="fld">Tags <span style="color:var(--muted);font-weight:600">(optional, comma-separated)</span></label>
+        <input type="text" id="nTags" placeholder="e.g. work, sleep, gym" value="${esc(f.tags)}" />
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-primary" id="nSave">${editing?"💾 Update note":"＋ Save note"}</button>
+        ${editing?`<button class="btn btn-ghost" id="nCancel">Cancel</button>`:""}
+      </div>
+    </div>
+
+    <div class="screen-head" style="margin-top:22px"><h1 style="font-size:17px">Your notes <span style="color:var(--muted);font-weight:600">(${DB.field_notes.length})</span></h1></div>
+    <div class="chips" style="margin-bottom:14px">
+      <button class="chip sm ${state.noteFilter==='all'?'on':''}" data-nfilter="all" style="--sw:#8a8397"><span class="swatch"></span>All</button>
+      ${NOTE_CATS.map(c=>`<button class="chip sm ${state.noteFilter===c.key?'on':''}" data-nfilter="${esc(c.key)}" style="--sw:${c.sw}"><span class="swatch"></span>${c.emoji} ${esc(c.short)}</button>`).join("")}
+    </div>
+    <div id="noteList">${renderNoteList(filtered)}</div>
+  `;
+
+  // wire composer
+  const title=$("#nTitle"), body=$("#nBody"), tags=$("#nTags");
+  title.oninput=()=>{ f.title=title.value; const c=wordCount(f.title); const el=$("#nTitleC"); el.textContent=`${c}/${TITLE_MAX} words`; el.className="counter"+(c>TITLE_MAX?" bad":(c<TITLE_MIN?" warn":"")); };
+  body.oninput=()=>{ f.content=body.value; const c=wordCount(f.content); const el=$("#nBodyC"); el.textContent=`${c}/${NOTE_WORDS} words`; el.className="counter"+(c>NOTE_WORDS?" bad":""); };
+  tags.oninput=()=> f.tags=tags.value;
+  $("#nCats").addEventListener("click",e=>{ const b=e.target.closest("[data-catpick]"); if(!b)return; f.category=b.dataset.catpick; $("#nCats").innerHTML=catChips(NOTE_CATS,f.category); });
+
+  $("#nSave").onclick=async()=>{
+    const t=f.title.trim(), b=f.content.trim();
+    if(!t){ toast("Add a title"); return; }
+    if(!f.category){ toast("Pick a category"); return; }
+    if(wordCount(b)>NOTE_WORDS){ toast("Note is over 500 words"); return; }
+    const tagArr=f.tags.split(",").map(s=>s.trim()).filter(Boolean);
+    if(editing){ await store.updateNote(editing,{title:t,content:b,category:f.category,tags:tagArr}); toast("Note updated"); }
+    else { await store.addNote({title:t,content:b,category:f.category,tags:tagArr}); toast("Saved ✓"); }
+    state.editingNote=null; state._noteForm=null; render();
+  };
+  if(editing) $("#nCancel").onclick=()=>{ state.editingNote=null; state._noteForm=null; render(); };
+
+  $("#noteList").addEventListener("click",e=>{
+    const card=e.target.closest("[data-note]"); if(!card)return;
+    state.editingNote=card.dataset.note; state._noteForm=null; render();
+    $("#composer").scrollIntoView({behavior:"smooth",block:"start"});
+  });
+  m.querySelectorAll("[data-nfilter]").forEach(b=> b.onclick=()=>{ state.noteFilter=b.dataset.nfilter; render(); });
+}
+
+function renderNoteList(notes){
+  if(!notes.length) return `<div class="empty"><div class="big">🗒️</div>No notes yet. Capture your first thought above.</div>`;
+  return `<div class="list-grid">`+notes.map(n=>{
+    const c=noteCat(n.category);
+    return `<div class="note-card" data-note="${n.id}" style="--sw:${c.sw}">
+      <div class="nc-top"><h3>${esc(n.title)}</h3></div>
+      ${n.content?`<div class="body">${esc(n.content)}</div>`:""}
+      <div class="meta" style="margin-top:9px">
+        <span class="catlabel" style="--sw:${c.sw}">${c.emoji} ${esc(c.short)}</span>
+        <span>${fmtDateTime(n.created_at)}</span><span>· ${weekLabel(n.created_at)}</span>
+      </div>
+      ${(n.tags&&n.tags.length)?`<div class="meta" style="margin-top:7px">${n.tags.map(t=>`<span class="tag">#${esc(t)}</span>`).join("")}</div>`:""}
+    </div>`;
+  }).join("")+`</div>`;
+}
+
+/* ============================================================================
+   7. WEEKLY REFLECTION COMPOSER
+   ========================================================================== */
+function blankWeekly(){ return { id:null, title:"", content:"", categories:[], noteIds:[], steps:[], linkWeek:"current", linkCat:"all", newStep:"" }; }
+function loadWeeklyForEdit(o){
+  return { id:o.id, title:o.title, content:o.content, categories:[...o.categories],
+    noteIds:notesForOutput(o.id).map(n=>n.id), steps:stepsForOutput(o.id).map(s=>({id:s.id,text:s.text})),
+    linkWeek:"all", linkCat:"all", newStep:"" };
+}
+
+function renderWeekly(m){
+  const w = state.weekly || (state.weekly = blankWeekly());
+
+  // linker source notes
+  const curWeek = weekLabel(nowISO());
+  let src = DB.field_notes.slice();
+  if(w.linkWeek==="current") src=src.filter(n=>weekLabel(n.created_at)===curWeek);
+  if(w.linkCat!=="all") src=src.filter(n=>n.category===w.linkCat);
+
+  m.innerHTML = `
+    <div class="screen-head"><h1>🗓️ Weekly reflection</h1><p>${w.id?"Editing an output.":"Distill your notes into an output. Link the notes that fed it."}</p></div>
+    <div class="grid2">
+      <div>
+        <div class="card">
+          <div class="field">
+            <div class="row-between"><label class="fld">Output title <span style="color:var(--muted);font-weight:600">(10–15 words)</span></label>${counterEl("oTitleC",wordCount(w.title),TITLE_MAX,TITLE_MIN)}</div>
+            <input type="text" id="oTitle" placeholder="The insight, in one line…" value="${esc(w.title)}" />
+          </div>
+          <div class="field">
+            <div class="row-between"><label class="fld">Reflection <span style="color:var(--muted);font-weight:600">(max 500 words)</span></label>${counterEl("oBodyC",wordCount(w.content),OUT_WORDS)}</div>
+            <textarea id="oBody" style="min-height:150px" placeholder="What's the pattern / meaning / takeaway?">${esc(w.content)}</textarea>
+          </div>
+          <div class="field">
+            <label class="fld">Output categories <span style="color:var(--muted);font-weight:600">(select any)</span></label>
+            <div id="oCats">${catChips(OUT_CATS,w.categories,{multi:true})}</div>
+          </div>
+        </div>
+        <div class="card">
+          <label class="fld">Next steps <span style="color:var(--muted);font-weight:600">(optional — add as many as you like)</span></label>
+          <div id="stepList">${w.steps.map((s,i)=>`<div class="ns-list-line"><span>${esc(s.text)}</span><button class="linkbtn" style="color:var(--bad)" data-delstep="${i}">remove</button></div>`).join("")}</div>
+          <div class="ns-item">
+            <textarea id="oNewStep" placeholder="A concrete follow-up action…">${esc(w.newStep)}</textarea>
+            <button class="btn btn-ghost btn-sm" id="oAddStep" style="white-space:nowrap">＋ Add</button>
+          </div>
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-primary" id="oSave">${w.id?"💾 Update output":"✓ Save output"}</button>
+          ${w.id?`<button class="btn btn-ghost" id="oCancel">Cancel</button>`:""}
+        </div>
+      </div>
+      <div>
+        <div class="card">
+          <label class="fld">Link field notes <span style="color:var(--muted);font-weight:600">(${w.noteIds.length} selected)</span></label>
+          <div class="filterbar" style="margin-bottom:12px">
+            <div class="fgroup"><span class="lab">Week</span>
+              <select id="lkWeek"><option value="current" ${w.linkWeek==="current"?"selected":""}>This week (${curWeek})</option><option value="all" ${w.linkWeek==="all"?"selected":""}>All notes</option></select>
+            </div>
+            <div class="fgroup"><span class="lab">Category</span>
+              <select id="lkCat"><option value="all">All</option>${NOTE_CATS.map(c=>`<option value="${esc(c.key)}" ${w.linkCat===c.key?"selected":""}>${esc(c.short)}</option>`).join("")}</select>
+            </div>
+          </div>
+          <div class="linker" id="linker">
+            ${src.length? src.map(n=>{
+              const on=w.noteIds.includes(n.id); const c=noteCat(n.category);
+              return `<label class="lk-row ${on?'sel':''}"><input type="checkbox" data-link="${n.id}" ${on?"checked":""}/>
+                <div><div class="lk-title"><span class="catlabel" style="--sw:${c.sw};font-size:10px;padding:2px 7px">${c.emoji}</span> ${esc(n.title)}</div>
+                <div class="lk-body">${esc(n.content||"")}</div>
+                <div class="meta" style="margin-top:4px">${fmtDate(n.created_at)} · ${weekLabel(n.created_at)}</div></div></label>`;
+            }).join("") : `<div class="empty" style="padding:24px">No notes match. Try “All notes”.</div>`}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="screen-head" style="margin-top:22px"><h1 style="font-size:17px">Recent outputs</h1></div>
+    <div id="recentOut">${renderMiniOutputs()}</div>
+  `;
+
+  const title=$("#oTitle"), body=$("#oBody");
+  title.oninput=()=>{ w.title=title.value; const c=wordCount(w.title); const el=$("#oTitleC"); el.textContent=`${c}/${TITLE_MAX} words`; el.className="counter"+(c>TITLE_MAX?" bad":(c<TITLE_MIN?" warn":"")); };
+  body.oninput=()=>{ w.content=body.value; const c=wordCount(w.content); const el=$("#oBodyC"); el.textContent=`${c}/${OUT_WORDS} words`; el.className="counter"+(c>OUT_WORDS?" bad":""); };
+  $("#oCats").addEventListener("click",e=>{ const b=e.target.closest("[data-catpick]"); if(!b)return; const k=b.dataset.catpick; w.categories.includes(k)? w.categories=w.categories.filter(x=>x!==k): w.categories.push(k); $("#oCats").innerHTML=catChips(OUT_CATS,w.categories,{multi:true}); });
+
+  $("#oNewStep").oninput=e=> w.newStep=e.target.value;
+  $("#oAddStep").onclick=()=>{ const t=w.newStep.trim(); if(!t){toast("Write a next step first");return;} w.steps.push({text:t}); w.newStep=""; renderWeekly(m); };
+  $("#stepList").addEventListener("click",e=>{ const b=e.target.closest("[data-delstep]"); if(!b)return; w.steps.splice(+b.dataset.delstep,1); renderWeekly(m); });
+
+  $("#lkWeek").onchange=e=>{ w.linkWeek=e.target.value; renderWeekly(m); };
+  $("#lkCat").onchange=e=>{ w.linkCat=e.target.value; renderWeekly(m); };
+  $("#linker").addEventListener("change",e=>{ const cb=e.target.closest("[data-link]"); if(!cb)return; const id=cb.dataset.link; cb.checked? (w.noteIds.includes(id)||w.noteIds.push(id)) : (w.noteIds=w.noteIds.filter(x=>x!==id)); renderWeekly(m); });
+
+  $("#oSave").onclick=async()=>{
+    const t=w.title.trim(), b=w.content.trim();
+    if(!t){ toast("Add an output title"); return; }
+    if(wordCount(b)>OUT_WORDS){ toast("Reflection is over 500 words"); return; }
+    // include any unsaved text still in the step box
+    const pending=w.newStep.trim(); const steps=[...w.steps]; if(pending) steps.push({text:pending});
+    await store.saveOutput({id:w.id,title:t,content:b,categories:w.categories,noteIds:w.noteIds,steps});
+    state.weekly=null; toast(w.id?"Output updated":"Output saved ✓"); render();
+  };
+  if(w.id) $("#oCancel").onclick=()=>{ state.weekly=null; render(); };
+
+  $("#recentOut").addEventListener("click",e=>{
+    const r=e.target.closest("[data-editout]"); if(!r)return;
+    state.weekly=loadWeeklyForEdit(outputById(r.dataset.editout)); renderWeekly(m); $("#oTitle").scrollIntoView({behavior:"smooth",block:"start"});
+  });
+}
+
+function renderMiniOutputs(){
+  const outs=DB.outputs.slice(0,6);
+  if(!outs.length) return `<div class="empty"><div class="big">📊</div>No outputs yet.</div>`;
+  return `<div class="list-grid wide3">`+outs.map(o=>{
+    const ns=stepsForOutput(o.id).length, nn=notesForOutput(o.id).length;
+    return `<div class="note-card" data-editout="${o.id}" style="--sw:var(--accent)">
+      <h3>${esc(o.title)}</h3>
+      <div class="meta" style="margin-top:8px">${(o.categories||[]).map(k=>{const c=outCat(k);return `<span class="catlabel" style="--sw:${c.sw};font-size:10px">${c.emoji}</span>`;}).join(" ")}
+      <span>${fmtDate(o.created_at)}</span></div>
+      <div class="meta" style="margin-top:6px">🔗 ${nn} notes · ✅ ${ns} next steps</div>
+    </div>`;
+  }).join("")+`</div>`;
+}
+
+/* ============================================================================
+   8. OUTPUT REVIEW
+   ========================================================================== */
+function applyOutFilter(){
+  const f=state.outFilter;
+  let rows=DB.outputs.slice();
+  if(f.cats.length) rows=rows.filter(o=>(o.categories||[]).some(c=>f.cats.includes(c)));
+  if(f.from) rows=rows.filter(o=>dayKey(o.created_at)>=f.from);
+  if(f.to) rows=rows.filter(o=>dayKey(o.created_at)<=f.to);
+  rows.sort((a,b)=> f.sort==="asc" ? (a.created_at<b.created_at?-1:1) : (a.created_at<b.created_at?1:-1));
+  return rows;
+}
+function renderOutputs(m){
+  const f=state.outFilter; const rows=applyOutFilter();
+  m.innerHTML = `
+    <div class="screen-head"><h1>📊 Output review</h1><p>Filter, sort and open your reflection outputs.</p></div>
+    <div class="card">
+      <div class="filterbar">
+        <div class="fgroup" style="flex:1;min-width:220px"><span class="lab">Category</span>
+          <div class="chips">${OUT_CATS.map(c=>`<button class="chip sm ${f.cats.includes(c.key)?'on':''}" data-ofcat="${esc(c.key)}" style="--sw:${c.sw}"><span class="swatch"></span>${c.emoji} ${esc(c.key)}</button>`).join("")}</div>
+        </div>
+        <div class="fgroup"><span class="lab">From day</span><input type="date" id="ofFrom" value="${f.from}"></div>
+        <div class="fgroup"><span class="lab">To day</span><input type="date" id="ofTo" value="${f.to}"></div>
+        <div class="fgroup"><span class="lab">&nbsp;</span><button class="btn btn-ghost btn-sm" id="ofClear">Clear</button></div>
+      </div>
+    </div>
+    <div class="card" style="padding:0;overflow:hidden;margin-top:14px">
+      <div class="tablewrap">
+        <table>
+          <thead><tr>
+            <th data-osort="title">Title</th>
+            <th data-osort="date">Date ${f.sort==="asc"?"▲":"▼"}</th>
+            <th>Categories</th>
+            <th data-osort="steps"># Next steps</th>
+          </tr></thead>
+          <tbody>${rows.length? rows.map(o=>{
+            const ns=stepsForOutput(o.id).length;
+            return `<tr data-openout="${o.id}">
+              <td><span class="titlecell">${esc(o.title)}</span></td>
+              <td>${fmtDate(o.created_at)}<div class="meta">${weekLabel(o.created_at)}</div></td>
+              <td>${(o.categories||[]).map(k=>{const c=outCat(k);return `<span class="catlabel" style="--sw:${c.sw};font-size:10px;margin:2px 3px 2px 0">${c.emoji} ${esc(k)}</span>`;}).join("")||"<span class='meta'>—</span>"}</td>
+              <td><span class="pill-count ${ns?'':'zero'}">${ns}</span></td>
+            </tr>`;
+          }).join("") : `<tr><td colspan="4"><div class="empty">No outputs match these filters.</div></td></tr>`}</tbody>
+        </table>
+      </div>
+    </div>
+    <p class="hint" style="margin-left:2px">${rows.length} output${rows.length===1?"":"s"} shown. Tap a row for full detail.</p>
+  `;
+
+  m.querySelectorAll("[data-ofcat]").forEach(b=> b.onclick=()=>{ const k=b.dataset.ofcat; f.cats.includes(k)? f.cats=f.cats.filter(x=>x!==k):f.cats.push(k); render(); });
+  $("#ofFrom").onchange=e=>{ f.from=e.target.value; render(); };
+  $("#ofTo").onchange=e=>{ f.to=e.target.value; render(); };
+  $("#ofClear").onclick=()=>{ state.outFilter={cats:[],from:"",to:"",sort:"desc"}; render(); };
+  m.querySelectorAll("[data-osort]").forEach(th=> th.onclick=()=>{ f.sort=f.sort==="asc"?"desc":"asc"; render(); });
+  m.querySelectorAll("[data-openout]").forEach(tr=> tr.onclick=()=> openOutputModal(tr.dataset.openout));
+}
+
+function openOutputModal(id){
+  const o=outputById(id); if(!o)return;
+  const notes=notesForOutput(id), steps=stepsForOutput(id);
+  showModal(`
+    <button class="close" data-close>✕</button>
+    <h2>${esc(o.title)}</h2>
+    <div class="meta" style="margin-bottom:6px">${fmtDateTime(o.created_at)} · ${weekLabel(o.created_at)}</div>
+    <div>${(o.categories||[]).map(k=>{const c=outCat(k);return `<span class="catlabel" style="--sw:${c.sw};margin:0 4px 4px 0">${c.emoji} ${esc(k)}</span>`;}).join("")}</div>
+    <div class="divider"></div>
+    <div style="white-space:pre-wrap;line-height:1.6;font-size:14px">${esc(o.content)||"<span class='meta'>No content.</span>"}</div>
+    <div class="divider"></div>
+    <p class="section-label">Linked field notes (${notes.length})</p>
+    ${notes.length? notes.map(n=>{const c=noteCat(n.category);return `<div class="linked-note" style="--sw:${c.sw}">
+      <div class="row-between"><strong style="font-size:13px">${esc(n.title)}</strong><span class="catlabel" style="--sw:${c.sw};font-size:10px">${c.emoji} ${esc(c.short)}</span></div>
+      ${n.content?`<div style="font-size:13px;color:var(--ink2);margin-top:5px;white-space:pre-wrap">${esc(n.content)}</div>`:""}
+      <div class="meta" style="margin-top:5px">${fmtDate(n.created_at)} · ${weekLabel(n.created_at)}</div></div>`;}).join("") : `<p class="meta">No notes linked.</p>`}
+    <div class="divider"></div>
+    <p class="section-label">Next steps (${steps.length})</p>
+    ${steps.length? steps.map(s=>`<div class="ns-list-line"><span>${esc(s.text)}</span><span class="meta">${fmtDate(s.created_at)} · ${followupsForStep(s.id).length} follow-ups</span></div>`).join("") : `<p class="meta">None.</p>`}
+    <div class="divider"></div>
+    <div class="btn-row">
+      <button class="btn btn-ghost btn-sm" data-editout2="${o.id}">✎ Edit in composer</button>
+      <button class="btn btn-danger btn-sm" data-delout="${o.id}">🗑 Delete output</button>
+    </div>
+  `,(root)=>{
+    root.querySelector("[data-editout2]").onclick=()=>{ closeModal(); state.weekly=loadWeeklyForEdit(o); state.tab="weekly"; render(); };
+    root.querySelector("[data-delout]").onclick=async()=>{ if(confirm("Delete this output, its links and next steps? This cannot be undone.")){ await store.deleteOutput(o.id); closeModal(); toast("Output deleted"); render(); } };
+  });
+}
+
+/* ============================================================================
+   9. NEXT-STEP REVIEW
+   ========================================================================== */
+function applyStepFilter(){
+  const f=state.stepFilter;
+  let rows=DB.next_steps.map(s=>({s,o:outputById(s.output_id)})).filter(x=>x.o);
+  if(f.cats.length) rows=rows.filter(x=>(x.o.categories||[]).some(c=>f.cats.includes(c)));
+  if(f.from) rows=rows.filter(x=>dayKey(x.s.created_at)>=f.from);
+  if(f.to) rows=rows.filter(x=>dayKey(x.s.created_at)<=f.to);
+  rows.sort((a,b)=> f.sort==="asc" ? (a.s.created_at<b.s.created_at?-1:1) : (a.s.created_at<b.s.created_at?1:-1));
+  return rows;
+}
+function renderSteps(m){
+  const f=state.stepFilter; const rows=applyStepFilter();
+  m.innerHTML=`
+    <div class="screen-head"><h1>✅ Next-step review</h1><p>Every next step across your outputs. Open one to log follow-up notes.</p></div>
+    <div class="card">
+      <div class="filterbar">
+        <div class="fgroup" style="flex:1;min-width:220px"><span class="lab">Output category</span>
+          <div class="chips">${OUT_CATS.map(c=>`<button class="chip sm ${f.cats.includes(c.key)?'on':''}" data-sfcat="${esc(c.key)}" style="--sw:${c.sw}"><span class="swatch"></span>${c.emoji} ${esc(c.key)}</button>`).join("")}</div>
+        </div>
+        <div class="fgroup"><span class="lab">From day</span><input type="date" id="sfFrom" value="${f.from}"></div>
+        <div class="fgroup"><span class="lab">To day</span><input type="date" id="sfTo" value="${f.to}"></div>
+        <div class="fgroup"><span class="lab">&nbsp;</span><button class="btn btn-ghost btn-sm" id="sfClear">Clear</button></div>
+      </div>
+    </div>
+    <div class="card" style="padding:0;overflow:hidden;margin-top:14px">
+      <div class="tablewrap">
+        <table>
+          <thead><tr>
+            <th data-ssort>Date ${f.sort==="asc"?"▲":"▼"}</th>
+            <th>Output</th>
+            <th>Next step</th>
+            <th>Follow-ups</th>
+          </tr></thead>
+          <tbody>${rows.length? rows.map(({s,o})=>{
+            const fu=followupsForStep(s.id).length;
+            return `<tr data-openstep="${s.id}">
+              <td>${fmtDate(s.created_at)}<div class="meta">${weekLabel(s.created_at)}</div></td>
+              <td><span class="titlecell">${esc(o.title)}</span></td>
+              <td>${esc(s.text)}</td>
+              <td><span class="pill-count ${fu?'':'zero'}">${fu}</span></td>
+            </tr>`;
+          }).join("") : `<tr><td colspan="4"><div class="empty">No next steps match.</div></td></tr>`}</tbody>
+        </table>
+      </div>
+    </div>
+    <p class="hint" style="margin-left:2px">${rows.length} next step${rows.length===1?"":"s"} shown.</p>
+  `;
+  m.querySelectorAll("[data-sfcat]").forEach(b=> b.onclick=()=>{ const k=b.dataset.sfcat; f.cats.includes(k)? f.cats=f.cats.filter(x=>x!==k):f.cats.push(k); render(); });
+  $("#sfFrom").onchange=e=>{ f.from=e.target.value; render(); };
+  $("#sfTo").onchange=e=>{ f.to=e.target.value; render(); };
+  $("#sfClear").onclick=()=>{ state.stepFilter={cats:[],from:"",to:"",sort:"desc"}; render(); };
+  m.querySelectorAll("[data-ssort]").forEach(th=> th.onclick=()=>{ f.sort=f.sort==="asc"?"desc":"asc"; render(); });
+  m.querySelectorAll("[data-openstep]").forEach(tr=> tr.onclick=()=> openStepModal(tr.dataset.openstep));
+}
+
+function openStepModal(id){
+  const s=DB.next_steps.find(x=>x.id===id); if(!s)return;
+  const o=outputById(s.output_id);
+  const draw=()=>{
+    const fus=followupsForStep(id);
+    return `
+      <button class="close" data-close>✕</button>
+      <h2>Next step</h2>
+      <div class="meta" style="margin-bottom:10px">Created ${fmtDateTime(s.created_at)} · ${weekLabel(s.created_at)}</div>
+      <div class="card" style="box-shadow:none;background:#fbfaf6"><div style="font-size:15px;line-height:1.5">${esc(s.text)}</div></div>
+      <p class="section-label" style="margin-top:16px">From output</p>
+      <div class="linked-note" style="--sw:var(--accent)"><strong style="font-size:13px">${esc(o?o.title:"(deleted)")}</strong>
+      ${o?`<div class="meta" style="margin-top:5px">${fmtDate(o.created_at)} · ${(o.categories||[]).map(k=>outCat(k).emoji).join(" ")}</div>`:""}</div>
+      <div class="divider"></div>
+      <p class="section-label">Follow-up notes (${fus.length})</p>
+      <div id="fuList">${fus.length? fus.map(fn=>`<div class="fu-note"><div class="meta">${fmtDateTime(fn.created_at)}</div><div style="font-size:13px;white-space:pre-wrap">${esc(fn.text)}</div></div>`).join("") : `<p class="meta">No follow-ups yet.</p>`}</div>
+      <div class="field" style="margin-top:10px"><textarea id="fuInput" placeholder="Add a follow-up note…"></textarea></div>
+      <div class="btn-row"><button class="btn btn-primary btn-sm" id="fuAdd">＋ Add follow-up</button>
+      <button class="btn btn-danger btn-sm" data-delstep2="${id}">🗑 Delete step</button></div>
+    `;
+  };
+  showModal(draw(),function wire(root){
+    $("#fuAdd").onclick=async()=>{ const t=$("#fuInput").value.trim(); if(!t){toast("Write a follow-up first");return;} await store.addFollowup(id,t); root.innerHTML=draw(); wire(root); toast("Follow-up added"); };
+    const del=root.querySelector("[data-delstep2]"); if(del) del.onclick=async()=>{ if(confirm("Delete this next step and its follow-ups?")){ await store.deleteStep(id); closeModal(); toast("Next step deleted"); render(); } };
+  });
+}
+
+/* ============================================================================
+   10. MODAL plumbing
+   ========================================================================== */
+function showModal(html,onMount){
+  closeModal();
+  const back=document.createElement("div"); back.className="modal-back"; back.id="modalBack";
+  back.innerHTML=`<div class="modal" role="dialog" aria-modal="true">${html}</div>`;
+  document.body.appendChild(back);
+  const root=back.querySelector(".modal");
+  back.addEventListener("click",e=>{ if(e.target===back) closeModal(); });
+  root.querySelectorAll("[data-close]").forEach(b=> b.onclick=closeModal);
+  if(onMount) onMount(root);
+}
+function closeModal(){ const b=$("#modalBack"); if(b) b.remove(); }
+document.addEventListener("keydown",e=>{ if(e.key==="Escape") closeModal(); });
+
+/* ============================================================================
+   11. AUTH (cloud mode only) + BOOT
+   ========================================================================== */
+function renderAuthGate(){
+  $("#main").innerHTML=`
+    <div class="auth-wrap"><div class="auth-card card">
+      <div class="big">🔒</div>
+      <h1 style="font-size:22px;margin:0 0 6px">Sign in</h1>
+      <p style="color:var(--muted);font-size:14px;margin:0 0 18px">We'll email you a magic link — no password needed.</p>
+      <div class="field"><input type="email" id="authEmail" placeholder="you@example.com"></div>
+      <button class="btn btn-primary btn-block" id="authSend">Send magic link</button>
+      <p class="hint" id="authMsg"></p>
+    </div></div>`;
+  $("#authSend").onclick=async()=>{
+    const email=$("#authEmail").value.trim(); if(!email){toast("Enter your email");return;}
+    $("#authMsg").textContent="Sending…";
+    const { error }=await supa.auth.signInWithOtp({ email, options:{ emailRedirectTo:location.href.split("#")[0] } });
+    $("#authMsg").textContent = error ? ("Error: "+error.message) : "Check your inbox for the sign-in link.";
+  };
+}
+
+async function boot(){
+  loadLocal();
+  const badge=$("#modeBadge");
+  if(USE_CLOUD){
+    // wait for the supabase UMD to load
+    if(!window.supabase){ await new Promise(r=>{ const i=setInterval(()=>{ if(window.supabase){clearInterval(i);r();} },40); setTimeout(r,4000); }); }
+    if(!window.supabase){ badge.textContent="Cloud (offline)"; badge.className="mode-badge local"; render(); return; }
+    supa=window.supabase.createClient(CONFIG.SUPABASE_URL,CONFIG.SUPABASE_ANON_KEY);
+    badge.textContent="☁ Cloud sync"; badge.className="mode-badge cloud";
+    const { data:{ session } }=await supa.auth.getSession();
+    supa.auth.onAuthStateChange((_e,s)=>{ if(s&&!USER_ID){ USER_ID=s.user.id; afterLogin(s); } });
+    if(!session){ renderTabs(); renderAuthGate(); return; }
+    USER_ID=session.user.id; await afterLogin(session);
+  } else {
+    badge.textContent="🖥 This device"; badge.className="mode-badge local";
+    $("#whoami").innerHTML="";
+    render();
+  }
+}
+async function afterLogin(session){
+  $("#whoami").innerHTML=`${esc(session.user.email||"")} · <button class="linkbtn" id="signout">sign out</button>`;
+  const so=$("#signout"); if(so) so.onclick=async()=>{ await supa.auth.signOut(); location.reload(); };
+  try{ await cloudPull(); await flushQueue(); }catch(e){ console.warn(e); toast("Offline — using local copy"); }
+  render();
+}
+
+/* service worker */
+if("serviceWorker" in navigator){ window.addEventListener("load",()=> navigator.serviceWorker.register("sw.js").catch(()=>{})); }
+
+boot();
+</script>
+</body>
+</html>
