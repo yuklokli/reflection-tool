@@ -146,6 +146,8 @@
   .note-card .nc-top{display:flex;justify-content:space-between;gap:8px;align-items:center;margin-bottom:5px;}
   .note-card h3{font-size:15px;margin:0;line-height:1.35;}
   .note-card .body{color:var(--ink2);font-size:13px;line-height:1.5;margin:4px 0 0;white-space:pre-wrap;overflow:hidden;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;}
+  .reflected-badge{font-size:10px;font-weight:800;color:var(--good);background:rgba(31,157,120,.12);border:1px solid rgba(31,157,120,.32);padding:2px 8px;border-radius:999px;white-space:nowrap;flex:none;}
+  .nc-actions{margin-top:11px;display:flex;justify-content:flex-end;}
   .meta{font-size:11px;color:var(--muted);font-weight:600;display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
   .catlabel{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:800;padding:3px 9px;border-radius:999px;color:#fff;background:var(--sw,#999);}
   .list-grid{display:grid;grid-template-columns:1fr;gap:11px;}
@@ -546,6 +548,8 @@ function renderCapture(m){
   if(editing) $("#nCancel").onclick=()=>{ state.editingNote=null; state._noteForm=null; render(); };
 
   $("#noteList").addEventListener("click",e=>{
+    const pro=e.target.closest("[data-promote]");
+    if(pro){ e.stopPropagation(); promoteNoteToOutput(pro.dataset.promote); return; }
     const card=e.target.closest("[data-note]"); if(!card)return;
     state.editingNote=card.dataset.note; state._noteForm=null; render();
     $("#composer").scrollIntoView({behavior:"smooth",block:"start"});
@@ -555,18 +559,29 @@ function renderCapture(m){
 
 function renderNoteList(notes){
   if(!notes.length) return `<div class="empty"><div class="big">🗒️</div>No notes yet. Capture your first thought above.</div>`;
+  const linkedSet = new Set(DB.links.map(l=>l.field_note_id));
   return `<div class="list-grid">`+notes.map(n=>{
     const c=noteCat(n.category);
+    const reflected = linkedSet.has(n.id);
     return `<div class="note-card" data-note="${n.id}" style="--sw:${c.sw}">
-      <div class="nc-top"><h3>${esc(n.title)}</h3></div>
+      <div class="nc-top"><h3>${esc(n.title)}</h3>${reflected?`<span class="reflected-badge">✓ reflected</span>`:""}</div>
       ${n.content?`<div class="body">${esc(n.content)}</div>`:""}
       <div class="meta" style="margin-top:9px">
         <span class="catlabel" style="--sw:${c.sw}">${c.emoji} ${esc(c.short)}</span>
         <span>${fmtDateTime(n.created_at)}</span><span>· ${weekLabel(n.created_at)}</span>
       </div>
       ${(n.tags&&n.tags.length)?`<div class="meta" style="margin-top:7px">${n.tags.map(t=>`<span class="tag">#${esc(t)}</span>`).join("")}</div>`:""}
+      <div class="nc-actions"><button class="btn btn-ghost btn-sm" data-promote="${n.id}">⤴ Make into output</button></div>
     </div>`;
   }).join("")+`</div>`;
+}
+
+/* Turn a single field note directly into a draft output (prefilled + auto-linked). */
+function promoteNoteToOutput(noteId){
+  const n=DB.field_notes.find(x=>x.id===noteId); if(!n) return;
+  state.weekly = { id:null, title:n.title, content:n.content||"", categories:[], noteIds:[n.id], steps:[], linkWeek:"all", linkCat:"all", newStep:"" };
+  state.tab="weekly"; render();
+  toast("Turned into a draft output — pick categories & save");
 }
 
 /* ============================================================================
@@ -582,9 +597,12 @@ function loadWeeklyForEdit(o){
 function renderWeekly(m){
   const w = state.weekly || (state.weekly = blankWeekly());
 
-  // linker source notes
+  // linker source notes — hide notes already reflected (linked to another saved output),
+  // so the list shows only what's left to reflect on.
   const curWeek = weekLabel(nowISO());
-  let src = DB.field_notes.slice();
+  const linkedElsewhere = new Set(DB.links.filter(l=>l.output_id!==w.id).map(l=>l.field_note_id));
+  let src = DB.field_notes.filter(n=>!linkedElsewhere.has(n.id));
+  const unreflected = src.filter(n=>!w.noteIds.includes(n.id)).length;
   if(w.linkWeek==="current") src=src.filter(n=>weekLabel(n.created_at)===curWeek);
   if(w.linkCat!=="all") src=src.filter(n=>n.category===w.linkCat);
 
@@ -595,11 +613,11 @@ function renderWeekly(m){
         <div class="card">
           <div class="field">
             <div class="row-between"><label class="fld">Output title <span style="color:var(--muted);font-weight:600">(10–15 words)</span></label>${counterEl("oTitleC",wordCount(w.title),TITLE_MAX,TITLE_MIN)}</div>
-            <input type="text" id="oTitle" placeholder="The insight, in one line…" value="${esc(w.title)}" />
+            <input type="text" id="oTitle" placeholder="Give this reflection a title…" value="${esc(w.title)}" />
           </div>
           <div class="field">
             <div class="row-between"><label class="fld">Reflection <span style="color:var(--muted);font-weight:600">(max 500 words)</span></label>${counterEl("oBodyC",wordCount(w.content),OUT_WORDS)}</div>
-            <textarea id="oBody" style="min-height:150px" placeholder="What's the pattern / meaning / takeaway?">${esc(w.content)}</textarea>
+            <textarea id="oBody" style="min-height:150px" placeholder="Write your reflection here…">${esc(w.content)}</textarea>
           </div>
           <div class="field">
             <label class="fld">Output categories <span style="color:var(--muted);font-weight:600">(select any)</span></label>
@@ -621,7 +639,7 @@ function renderWeekly(m){
       </div>
       <div>
         <div class="card">
-          <label class="fld">Link field notes <span style="color:var(--muted);font-weight:600">(${w.noteIds.length} selected)</span></label>
+          <label class="fld">Link field notes <span style="color:var(--muted);font-weight:600">(${w.noteIds.length} selected · ${unreflected} still to reflect on)</span></label>
           <div class="filterbar" style="margin-bottom:12px">
             <div class="fgroup"><span class="lab">Week</span>
               <select id="lkWeek"><option value="current" ${w.linkWeek==="current"?"selected":""}>This week (${curWeek})</option><option value="all" ${w.linkWeek==="all"?"selected":""}>All notes</option></select>

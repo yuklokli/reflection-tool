@@ -3,7 +3,7 @@
 A personal, two-stage reflection tool built as a single-file installable PWA.
 
 1. **Capture** — jot quick field notes (title, ≤500-word body, one of five categories). Mobile-first.
-2. **Weekly** — distill notes into reflection *outputs*: link the notes that fed each one, tag output categories, add next steps.
+2. **Weekly** — distill notes into reflection *outputs*: link the notes that fed each one, tag output categories, add next steps. The note-linker only shows notes you *haven't* reflected on yet (linked notes drop off the list, and show a "✓ reflected" badge back on Capture), so it doubles as a to-do list of what's left. You can also turn a single note straight into an output with **⤴ Make into output** on any note card.
 3. **Outputs** — filter/sort your outputs by category and creation date; open any for full detail + linked notes.
 4. **Next Steps** — review every next step across outputs; open one to append follow-up notes.
 
